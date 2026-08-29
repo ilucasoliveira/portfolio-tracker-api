@@ -34,7 +34,7 @@ Work in progress. Implemented so far:
 Requires Docker and Docker Compose.
 
 ```bash
-git clone https://github.com/<your-user>/investment-portfolio.git
+git clone https://github.com/ilucasoliveira/portfolio-tracker-api
 cd investment-portfolio
 cp .env.example .env
 ```
