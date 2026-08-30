@@ -22,7 +22,7 @@ Work in progress. Implemented so far:
 - [x] User registration with argon2 password hashing
 - [x] Login returning a signed JWT access token
 - [x] Token validation dependency (`get_current_user`)
-- [ ] Assets endpoints
+- [x] Assets endpoints
 - [ ] Transactions endpoints (scoped to the authenticated user)
 - [ ] Position calculation from transaction history
 - [ ] External quotes integration

@@ -1,7 +1,9 @@
 from pydantic import Field, field_validator, BaseModel, EmailStr, ConfigDict
-from app.models import BuyOrSell
+
 from datetime import date, datetime
 from decimal import Decimal
+
+from app.models import BuyOrSell
 
 # USER
 class SchemaUser(BaseModel):

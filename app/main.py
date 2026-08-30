@@ -6,15 +6,19 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
 from app.database import init_db, get_db
-from app.models import User
-from app.schemas import SchemaUser, SchemaUserResponse, SchemaToken
+from app.models import User, Asset
+from app.schemas import( 
+    SchemaUser,
+    SchemaUserResponse,
+    SchemaToken,
+    SchemaAsset,
+    SchemaAssetResponse,)
 from app.security import(
     hash_password,
     verify_password,
     create_access_token,
-    get_current_user)
+    get_current_user,)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -80,3 +84,32 @@ async def create_login(form_data: OAuth2PasswordRequestForm = Depends(), db: Asy
     token = create_access_token({"sub": str(user_result.id)})
     
     return SchemaToken(access_token=token)
+
+@app.post("/assets", status_code=201, response_model=SchemaAssetResponse)
+async def create_asset(asset: SchemaAsset, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    
+    consult_ticker = await db.execute(select(Asset).where(Asset.ticker == asset.ticker))
+    consult_ticker_result = consult_ticker.scalars().first()
+    
+    if consult_ticker_result:
+        raise HTTPException(status_code=409, detail="Ticker already registered. Please, try again")
+    
+    new_asset = Asset(**asset.model_dump())
+    
+    try:
+        db.add(new_asset)
+        await db.commit()
+        await db.refresh(new_asset)
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="Ticker already registered. Please, try again")
+    
+    return new_asset
+
+@app.get("/assets", response_model=list[SchemaAssetResponse])
+async def read_assets(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    
+    assets = await db.execute(select(Asset))
+    assets_result = assets.scalars().all()
+    
+    return assets_result
