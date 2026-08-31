@@ -23,7 +23,7 @@ Work in progress. Implemented so far:
 - [x] Login returning a signed JWT access token
 - [x] Token validation dependency (`get_current_user`)
 - [x] Assets endpoints
-- [ ] Transactions endpoints (scoped to the authenticated user)
+- [x] Transactions endpoints (scoped to the authenticated user)
 - [ ] Position calculation from transaction history
 - [ ] External quotes integration
 - [ ] Redis caching for quotes
