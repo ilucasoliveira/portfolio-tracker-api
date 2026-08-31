@@ -7,13 +7,15 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import init_db, get_db
-from app.models import User, Asset
+from app.models import User, Asset, Transaction
 from app.schemas import( 
     SchemaUser,
     SchemaUserResponse,
     SchemaToken,
     SchemaAsset,
-    SchemaAssetResponse,)
+    SchemaAssetResponse,
+    SchemaTransaction,
+    SchemaTransactionResponse)
 from app.security import(
     hash_password,
     verify_password,
@@ -113,3 +115,32 @@ async def read_assets(current_user: User = Depends(get_current_user), db: AsyncS
     assets_result = assets.scalars().all()
     
     return assets_result
+
+@app.post("/transactions", status_code=201, response_model=SchemaTransactionResponse)
+async def create_transaction(transaction: SchemaTransaction, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    
+    verify_asset_id = await db.execute(select(Asset).where(Asset.id == transaction.asset_id))
+    verify_asset_id_result = verify_asset_id.scalars().first()
+    
+    if not verify_asset_id_result:
+        raise HTTPException(status_code=404, detail="ID not found!")
+    
+    new_transaction = Transaction(**transaction.model_dump(), user_id=current_user.id)
+    
+    try:
+        db.add(new_transaction)
+        await db.commit()
+        await db.refresh(new_transaction)
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=404, detail="ID not found!")
+    
+    return new_transaction
+
+@app.get("/transactions", response_model=list[SchemaTransactionResponse])
+async def read_transactions(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    
+    transactions = await db.execute(select(Transaction).where(Transaction.user_id == current_user.id))
+    transactions_result = transactions.scalars().all()
+    
+    return transactions_result
