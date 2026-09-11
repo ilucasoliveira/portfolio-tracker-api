@@ -1,7 +1,7 @@
 from pydantic import Field, field_validator, BaseModel, EmailStr, ConfigDict
 
 from datetime import date, datetime
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from app.models import BuyOrSell
 
@@ -57,3 +57,17 @@ class SchemaTransactionResponse(BaseModel):
     quantity: int
     unitary_price: Decimal
     operation_date: date
+
+# PORTFOLIO
+class SchemaPortfolioResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
+    ticker: str
+    company_name: str
+    quantity: int
+    average_price: Decimal
+    
+    @field_validator("average_price")
+    @classmethod
+    def round_price(cls, value):
+        return value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)

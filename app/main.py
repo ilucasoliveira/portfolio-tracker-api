@@ -1,10 +1,12 @@
 from contextlib import asynccontextmanager
+from collections import defaultdict
 
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.database import init_db, get_db
 from app.models import User, Asset, Transaction
@@ -15,12 +17,14 @@ from app.schemas import(
     SchemaAsset,
     SchemaAssetResponse,
     SchemaTransaction,
-    SchemaTransactionResponse)
+    SchemaTransactionResponse,
+    SchemaPortfolioResponse,)
 from app.security import(
     hash_password,
     verify_password,
     create_access_token,
     get_current_user,)
+from app.services import calculate_position
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -144,3 +148,44 @@ async def read_transactions(current_user: User = Depends(get_current_user), db: 
     transactions_result = transactions.scalars().all()
     
     return transactions_result
+
+@app.get("/portfolio", response_model=list[SchemaPortfolioResponse])
+async def read_portfolio(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    
+    transactions = await db.execute(
+        select(Transaction)
+        .where(Transaction.user_id == current_user.id)
+        .options(selectinload(Transaction.asset))
+        .order_by(Transaction.asset_id, Transaction.operation_date, Transaction.id)
+    )
+    
+    transactions_result = transactions.scalars().all()
+    
+    grouped = {}
+    
+    for transaction in transactions_result:
+        result_asset = transaction.asset_id
+        if result_asset not in grouped:
+            grouped[result_asset] = []
+        grouped[result_asset].append(transaction)
+    
+    positions = []
+    
+    for asset_id, asset_transactions in grouped.items():
+        position = calculate_position(asset_transactions)
+        
+        if position["quantity"] == 0:
+            continue
+        
+        asset = asset_transactions[0].asset
+        
+        positions.append(
+            SchemaPortfolioResponse(
+                ticker=asset.ticker,
+                company_name=asset.company_name,
+                quantity=position["quantity"],
+                average_price=position["average_price"],
+            )
+        )
+    
+    return positions
