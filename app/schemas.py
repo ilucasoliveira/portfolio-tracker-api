@@ -74,7 +74,13 @@ class SchemaPortfolioResponse(BaseModel):
     quantity: int
     average_price: Decimal
     
-    @field_validator("average_price")
+    current_price: Decimal | None = None
+    current_value: Decimal | None = None
+    profit_loss: Decimal | None = None
+    
+    @field_validator("average_price", "current_price", "current_value", "profit_loss")
     @classmethod
     def round_price(cls, value):
+        if value is None:
+            return None
         return value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)

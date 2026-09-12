@@ -1,5 +1,4 @@
 from contextlib import asynccontextmanager
-from collections import defaultdict
 
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.security import OAuth2PasswordRequestForm
@@ -10,6 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from app.database import init_db, get_db
 from app.models import User, Asset, Transaction
+from app.quotes import fetch_quotes
 from app.schemas import( 
     SchemaUser,
     SchemaUserResponse,
@@ -170,22 +170,46 @@ async def read_portfolio(current_user: User = Depends(get_current_user), db: Asy
             grouped[result_asset] = []
         grouped[result_asset].append(transaction)
     
-    positions = []
+    computed = []
     
-    for asset_id, asset_transactions in grouped.items():
+    for asset_transactions in grouped.values():
         position = calculate_position(asset_transactions)
-        
+    
         if position["quantity"] == 0:
             continue
-        
+    
         asset = asset_transactions[0].asset
-        
+        computed.append((asset, position))
+    
+    if not computed:
+        return []
+    
+    tickers = [asset.ticker for asset, _ in computed]
+    quotes = await fetch_quotes(tickers)
+    
+    positions = []
+    
+    for asset, position in computed:
+        quantity = position["quantity"]
+        average_price = position["average_price"]
+        current_price = quotes.get(asset.ticker)
+    
+        current_value = None
+        profit_loss = None
+    
+        if current_price is not None:
+            current_value = quantity * current_price
+            profit_loss = current_value - (quantity * average_price)
+            
         positions.append(
             SchemaPortfolioResponse(
                 ticker=asset.ticker,
                 company_name=asset.company_name,
-                quantity=position["quantity"],
-                average_price=position["average_price"],
+                quantity=quantity,
+                average_price=average_price,
+                current_price=current_price,
+                current_value=current_value,
+                profit_loss=profit_loss,
             )
         )
     
