@@ -24,7 +24,7 @@ Work in progress. Implemented so far:
 - [x] Token validation dependency (`get_current_user`)
 - [x] Assets endpoints
 - [x] Transactions endpoints (scoped to the authenticated user)
-- [ ] Position calculation from transaction history
+- [x] Position calculation from transaction history
 - [ ] External quotes integration
 - [ ] Redis caching for quotes
 - [ ] Automated tests
