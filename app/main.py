@@ -17,6 +17,7 @@ from app.schemas import(
     SchemaAsset,
     SchemaAssetResponse,
     SchemaTransaction,
+    SchemaTransactionUpdate,
     SchemaTransactionResponse,
     SchemaPortfolioResponse,)
 from app.security import(
@@ -189,3 +190,66 @@ async def read_portfolio(current_user: User = Depends(get_current_user), db: Asy
         )
     
     return positions
+
+@app.get("/transactions/{transaction_id}", status_code=200, response_model=SchemaTransactionResponse)
+async def read_one_transaction(
+    transaction_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)) -> Transaction:
+    
+    transaction = await db.execute(select(Transaction).where(Transaction.id == transaction_id, Transaction.user_id == current_user.id))
+    transaction_result = transaction.scalars().first()
+    
+    if not transaction_result:
+        raise HTTPException(status_code=404, detail="Transaction not found. Please, try again!")
+    
+    return transaction_result
+
+@app.patch("/transactions/{transaction_id}", status_code=200, response_model=SchemaTransactionResponse)
+async def update_one_transaction(
+    transaction_id: int,
+    update_transaction: SchemaTransactionUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)) -> Transaction:
+    
+    transaction = await db.execute(select(Transaction).where(Transaction.id == transaction_id, Transaction.user_id == current_user.id))
+    transaction_result = transaction.scalars().first()
+    
+    if not transaction_result:
+            raise HTTPException(status_code=404, detail="Transaction not found. Please, try again!")
+    
+    updated_transaction = update_transaction.model_dump(exclude_unset=True)
+    
+    if "asset_id" in updated_transaction:
+        verify_asset = await db.execute(
+            select(Asset).where(Asset.id == updated_transaction["asset_id"])
+        )
+        if not verify_asset.scalars().first():
+            raise HTTPException(status_code=404, detail="Asset not found. Please, try again!")
+    
+    for key, value in updated_transaction.items():
+        setattr(transaction_result, key, value)
+    
+    try:
+        await db.commit()
+        await db.refresh(transaction_result)
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="Update Transaction cannot be done. Please, try again!")
+    
+    return transaction_result
+
+@app.delete("/transactions/{transaction_id}", status_code=204)
+async def delete_transaction(
+    transaction_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)) -> None:
+    
+    transaction = await db.execute(select(Transaction).where(Transaction.id == transaction_id, Transaction.user_id == current_user.id))
+    transaction_result = transaction.scalars().first()
+    
+    if not transaction_result:
+        raise HTTPException(status_code=404, detail="Transaction not found. Please, try again!")
+    
+    await db.delete(transaction_result)
+    await db.commit()

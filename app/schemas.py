@@ -48,6 +48,13 @@ class SchemaTransaction(BaseModel):
     unitary_price: Decimal = Field(gt=0, description="Unitary's price")
     operation_date: date = Field(default_factory=date.today, description="Date's operation")
 
+class SchemaTransactionUpdate(BaseModel):
+    asset_id: int | None = Field(default=None)
+    operation: BuyOrSell | None = Field(default=None)
+    quantity: int | None = Field(default=None, gt=0)
+    unitary_price: Decimal | None = Field(default=None, gt=0)
+    operation_date: date | None = Field(default=None)
+
 class SchemaTransactionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     
