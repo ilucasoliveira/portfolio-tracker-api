@@ -5,14 +5,17 @@ import logging
 from decimal import Decimal
 from dotenv import load_dotenv
 
+from app.cache import cache_set, cache_get
+
 load_dotenv()
 
 QUOTE_API = os.getenv("QUOTES_API_KEY")
 BRAPI_URL = "https://brapi.dev/api/v2/stocks/quote"
+QUOTE_TTL = 60
 
 logger = logging.getLogger(__name__)
 
-async def fetch_quotes(tickers: list[str]) -> dict[str, Decimal]:
+async def _fetch_from_api(tickers: list[str]) -> dict[str, Decimal]:
     
     tickers_str = ",".join(tickers)
     params = {
@@ -40,3 +43,26 @@ async def fetch_quotes(tickers: list[str]) -> dict[str, Decimal]:
             quotes[symbol] = Decimal(str(price))
         
         return quotes
+
+async def fetch_quotes(tickers: list[str]) -> dict[str, Decimal]:
+    
+    quotes = {}
+    missing = []
+    
+    for ticker in tickers:
+        cached = await cache_get(f"quote:{ticker}")
+        if cached is not None:
+            quotes[ticker] = Decimal(cached)
+        else:
+            missing.append(ticker)
+    
+    if not missing:
+        return quotes
+    
+    fetched = await _fetch_from_api(missing)
+    
+    for ticker, price in fetched.items():
+        quotes[ticker] = price
+        await cache_set(f"quote:{ticker}", str(price), ttl=QUOTE_TTL)
+    
+    return quotes
