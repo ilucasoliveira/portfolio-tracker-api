@@ -26,8 +26,8 @@ Work in progress. Implemented so far:
 - [x] Transactions endpoints (scoped to the authenticated user)
 - [x] Position calculation from transaction history
 - [x] External quotes integration
-- [ ] Redis caching for quotes
-- [ ] Automated tests
+- [x] Redis caching for quotes
+- [x] Automated tests
 
 ## Running locally
 
