@@ -30,3 +30,7 @@ dev = [
     "pytest (>=9.1.1,<10.0.0)",
     "pytest-asyncio (>=1.4.0,<2.0.0)"
 ]
+
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
