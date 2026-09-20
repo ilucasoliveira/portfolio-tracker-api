@@ -1,8 +1,13 @@
-# Investment Portfolio API
+# Portfolio Tracker API
 
 REST API for tracking a personal investment portfolio. Users record their buy and sell
 transactions and the API derives current positions, average cost and profit or loss using
 live quotes from an external market data provider.
+
+**Live:** https://portfolio-tracker-api-6dvs.onrender.com/docs
+
+The API is deployed on a free tier that sleeps after 15 minutes of
+inactivity, so the first request may take up to a minute to respond.
 
 ## Stack
 
@@ -29,6 +34,7 @@ The core is complete and tested. Remaining:
 - [x] Redis caching for quotes
 - [x] Unit tests for position calculation
 - [x] API integration tests against an isolated Postgres
+- [x] Deployed on Render, with Supabase Postgres and Upstash Redis
 - [ ] Database migrations (Alembic)
 - [ ] Reject sells larger than the current position
 
@@ -38,7 +44,7 @@ Requires Docker and Docker Compose.
 
 ```bash
 git clone https://github.com/ilucasoliveira/portfolio-tracker-api
-cd investment-portfolio
+cd portfolio-tracker-api
 cp .env.example .env
 ```
 
@@ -133,6 +139,14 @@ provider. When the provider is unavailable, `current_price`,
 portfolio still responds, instead of the whole endpoint returning an
 error. Failed fetches are never cached, so tickers already in cache keep
 serving their last known price.
+
+### Prepared statements are disabled for the pooled connection
+
+In production the database is reached through a transaction-mode pooler,
+which does not keep a session between statements. asyncpg caches prepared
+statements by default, and those are no longer valid on the next checkout,
+so the engine sets `statement_cache_size` to 0. The setting is harmless on
+a direct connection, so the same code runs locally unchanged.
 
 ## Project structure
 
