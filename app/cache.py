@@ -6,10 +6,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-REDIS_HOST = os.getenv("REDIS_HOST", "redis")
-REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379")
 
-redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True)
+redis_client = redis.from_url(REDIS_URL, decode_responses=True)
 
 async def cache_set(key, data, ttl: int = 30):
     await redis_client.setex(key, ttl, json.dumps(data))

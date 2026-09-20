@@ -1,5 +1,5 @@
 [project]
-name = "investment-portfolio"
+name = "portfolio-tracker-api"
 version = "0.1.0"
 description = ""
 authors = [
