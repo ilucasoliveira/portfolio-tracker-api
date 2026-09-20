@@ -9,9 +9,9 @@ load_dotenv()
 
 DATABASE = os.getenv("DATABASE_URL")
 
-engine = create_async_engine(DATABASE, pool_pre_ping=True)
+engine = create_async_engine(DATABASE, pool_pre_ping=True, connect_args={"statement_cache_size": 0},)
 
-SessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False, connect_args={"statement_cache_size": 0})
+SessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False)
 
 async def get_db():
     db = SessionLocal()
