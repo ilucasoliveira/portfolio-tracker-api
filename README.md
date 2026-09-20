@@ -17,17 +17,20 @@ live quotes from an external market data provider.
 
 ## Status
 
-Work in progress. Implemented so far:
+The core is complete and tested. Remaining:
 
 - [x] User registration with argon2 password hashing
 - [x] Login returning a signed JWT access token
 - [x] Token validation dependency (`get_current_user`)
 - [x] Assets endpoints
-- [x] Transactions endpoints (scoped to the authenticated user)
+- [x] Transactions CRUD, scoped to the authenticated user
 - [x] Position calculation from transaction history
-- [x] External quotes integration
+- [x] External quotes integration (brapi)
 - [x] Redis caching for quotes
-- [x] Automated tests
+- [x] Unit tests for position calculation
+- [x] API integration tests against an isolated Postgres
+- [ ] Database migrations (Alembic)
+- [ ] Reject sells larger than the current position
 
 ## Running locally
 
@@ -56,6 +59,20 @@ The API is available at `http://localhost:8000` and the interactive docs at
 
 Postgres is exposed on host port `5433` to avoid clashing with a local installation
 on the default `5432`.
+
+## Tests
+
+The suite runs against a dedicated Postgres instance, separate from the
+development database. Start it and run pytest:
+
+```bash
+docker compose up -d db_test
+poetry install --with dev
+pytest
+```
+
+The schema is created and dropped around every test, so each one starts
+from an empty database.
 
 ## Authentication
 
@@ -100,6 +117,23 @@ and one external quote request per user for the same price.
 `transactions` carries `user_id` and every query filters on the authenticated user, so
 one user can never read another user's operations.
 
+### Quotes are cached per ticker, not per portfolio
+
+Each quote is cached under `quote:<TICKER>` rather than caching a whole
+portfolio response. A ticker held by several users is then fetched once
+for all of them, and buying a new asset does not invalidate the quotes
+already cached for the rest of the portfolio. Only the tickers missing
+from the cache are requested from the provider.
+
+### The portfolio degrades rather than failing
+
+Cost basis lives in our own database and does not depend on the quote
+provider. When the provider is unavailable, `current_price`,
+`current_value` and `profit_loss` come back null and the rest of the
+portfolio still responds, instead of the whole endpoint returning an
+error. Failed fetches are never cached, so tickers already in cache keep
+serving their last known price.
+
 ## Project structure
 
 ```
@@ -109,6 +143,13 @@ app/
   schemas.py    Pydantic schemas
   database.py   Async engine, session factory and init
   security.py   Password hashing, JWT creation and validation
+  services.py   Domain logic (position calculation)
+  quotes.py     External quote provider client, with caching
+  cache.py      Redis client and generic cache helpers
+tests/
+  conftest.py       Fixtures: test database, session and HTTP client
+  test_services.py  Unit tests for position calculation
+  test_api.py       Endpoint tests, including ownership
 ```
 
 ## License
