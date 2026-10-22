@@ -4,7 +4,7 @@ REST API for tracking a personal investment portfolio. Users record their buy an
 transactions and the API derives current positions, average cost and profit or loss using
 live quotes from an external market data provider.
 
-**Live:** https://portfolio-tracker-api-6dvs.onrender.com/docs
+**Live:** https://portfolio-tracker-api-ojc3.onrender.com/docs
 
 The API is deployed on a free tier that sleeps after 15 minutes of
 inactivity, so the first request may take up to a minute to respond.
@@ -34,7 +34,7 @@ The core is complete and tested. Remaining:
 - [x] Redis caching for quotes
 - [x] Unit tests for position calculation
 - [x] API integration tests against an isolated Postgres
-- [x] Deployed on Render, with Supabase Postgres and Upstash Redis
+- [x] Deployed on Render, with Neon Postgres and Upstash Redis
 - [ ] Database migrations (Alembic)
 - [ ] Reject sells larger than the current position
 
